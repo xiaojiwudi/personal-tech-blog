@@ -62,7 +62,7 @@ $$
 
 给定至今所有观测 $z_{1:k}$ 和输入 $u_{0:k-1}$，求状态 $x_k$ 的最优估计 $\hat{x}_{k|k}$，以及它的不确定度 $P_{k|k}$。
 
-**关键前提**：系统线性 + 噪声高斯。这两个前提缺一个，最优性就没了，只能近似（见 kalman-filter-family）。
+**关键前提**：系统线性 + 噪声高斯。这两个前提缺一个，最优性就没了，只能使用 EKF、UKF 等近似方案。
 
 ---
 
@@ -198,7 +198,7 @@ $$
 
 ## 边界与变体
 
-- **系统非线性** → 线性化（EKF/ESKF）、取 sigma 点（UKF）、容积点（CKF）、Lie 群不变性（InEKF）。详见 kalman-filter-family。
+- **系统非线性** → 线性化（EKF/ESKF）、取 sigma 点（UKF）、容积点（CKF）、Lie 群不变性（InEKF）。
 - **噪声非高斯 / 多模态** → 粒子滤波。
 - **要估过去（用未来数据）** → RTS 平滑器。
 - **要全局最优、要回环** → 因子图 / 滑动窗口优化。
@@ -232,7 +232,7 @@ $$
 
 ## 相关笔记
 
-- kalman-filter-family — 本体之外的变体谱系（EKF/UKF/CKF/InEKF 与因子图）
+- Kalman filter 变体谱系 — 本体之外的 EKF/UKF/CKF/InEKF 与因子图路线（私有草稿，暂不发布链接）
 - lqr-explained — 与 KF 对偶的最优控制，LQG 组合
 - control-theory-map — 观测器与分离原理的上位定位
 - math-foundations-for-control — 概率与随机过程的地基
