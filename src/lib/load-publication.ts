@@ -5,23 +5,43 @@ import sanitizeHtml from "sanitize-html";
 import { codeToHtml } from "shiki";
 import { buildPublicationModel } from "./publication-model";
 import { validateContentPackage } from "./content-package";
+import { validateIframe } from "./html-policy";
 import type { ArticlesIndexV1, LoadedArticle } from "./types";
 
 function headingId(text: string): string {
   return text.normalize("NFKC").toLowerCase().replace(/<[^>]+>/g, "").replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
 }
 
+function readableHeading(text: string): string {
+  return text
+    .replace(/\$+/g, "")
+    .replace(/\\sqrt\{([^{}]+)\}/g, "√($1)")
+    .replace(/\\text\{([^{}]+)\}/g, "$1")
+    .replace(/[{}]/g, "");
+}
+
 export async function renderMarkdown(markdown: string) {
+  for (const match of markdown.matchAll(/<iframe\b([^>]*)>/gi)) {
+    const attributes = Object.fromEntries(
+      [...match[1].matchAll(/([\w-]+)=["']([^"']*)["']/g)].map((attribute) => [attribute[1], attribute[2]]),
+    );
+    validateIframe({
+      src: attributes.src ?? "",
+      sandbox: attributes.sandbox ?? "",
+      title: attributes.title ?? "",
+    });
+  }
   const headings: { depth: number; text: string; id: string }[] = [];
   const renderer = new Renderer();
-  renderer.heading = ({ tokens, depth }: Tokens.Heading) => {
+  renderer.heading = ({ tokens, depth, text: sourceText }: Tokens.Heading) => {
     const text = renderer.parser.parseInline(tokens);
-    const id = headingId(text);
-    headings.push({ depth, text: text.replace(/<[^>]+>/g, ""), id });
+    const readableText = readableHeading(sourceText);
+    const id = headingId(readableText);
+    headings.push({ depth, text: readableText, id });
     return `<h${depth} id="${id}">${text}</h${depth}>`;
   };
   const parser = new Marked(
-    markedKatex({ throwOnError: false }),
+    markedKatex({ throwOnError: false, nonStandard: true }),
     markedHighlight({
       async: true,
       async highlight(code, language) {
@@ -39,7 +59,7 @@ export async function renderMarkdown(markdown: string) {
       iframe: ["src", "title", "sandbox", "loading", "width", "height"]
     },
     allowedSchemes: ["http", "https", "mailto"],
-    allowedIframeHostnames: []
+    allowIframeRelativeUrls: true
   });
   return { html, headings };
 }

@@ -30,9 +30,17 @@ test("interactive tutorials stay inside sandboxed frames", async ({ page }) => {
   const frame = page.locator('iframe[sandbox="allow-scripts"]');
   await expect(frame).toHaveCount(3);
   await expect(frame.first()).toHaveAttribute("loading", "lazy");
+  await expect(frame.first()).toHaveAttribute("src", /^\/interactives\/[a-f0-9]+\.html$/);
   await expect(
-    page.locator('iframe[sandbox="allow-scripts"]').first().contentFrame().locator("body"),
+    frame.first().contentFrame().getByText("你是一个 token", { exact: true }),
   ).toBeVisible();
+});
+
+test("math is rendered as visible KaTeX", async ({ page }) => {
+  await page.goto("/articles/transformer/");
+  const firstFormula = page.locator(".katex").first();
+  await expect(firstFormula.locator(".katex-html")).toBeVisible();
+  await expect(firstFormula).not.toContainText("$$");
 });
 
 test("private notes are not routable", async ({ request }) => {
