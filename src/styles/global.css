@@ -23,6 +23,8 @@ footer { border-top: 1px solid #ced6cd; padding: 2rem 0; color: #526057; }
 .prose { max-width: 780px; }
 .prose img { max-width: 100%; height: auto; }
 .prose iframe { width: 100%; border: 1px solid #c9d2c8; border-radius: 10px; }
+.prose .katex-display { overflow-x: auto; overflow-y: hidden; padding: .75rem .5rem; }
+.prose .katex-display > .katex { min-width: max-content; }
 .prose pre { overflow-x: auto; border-radius: 10px; padding: 1rem; }
 .article-layout { display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: 3rem; }
 .toc { position: sticky; top: 1rem; align-self: start; }
