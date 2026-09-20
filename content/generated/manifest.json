@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "source": {
     "repository": "robot-kb",
-    "commitSha": "4f13b771873b30d503b7d870288d69baac4dba08"
+    "commitSha": "21f2ff929834fcb3606708b2c15cd63897f4bc39"
   },
   "articles": [
     {
@@ -24,7 +24,7 @@
     {
       "slug": "kalman-filter-explained",
       "path": "articles/kalman-filter-explained.md",
-      "sha256": "521250e0c327fff85d9ff0ecbcf906aecd3bb4e54ced32b31cf760b36804b94d",
+      "sha256": "95a80a83db408e261f8d9af5194f2a38c17f0c645df73a7953bb67cd9f4ca097",
       "resources": []
     },
     {
@@ -70,7 +70,7 @@
     {
       "path": "articles/kalman-filter-explained.md",
       "kind": "article",
-      "sha256": "521250e0c327fff85d9ff0ecbcf906aecd3bb4e54ced32b31cf760b36804b94d",
+      "sha256": "95a80a83db408e261f8d9af5194f2a38c17f0c645df73a7953bb67cd9f4ca097",
       "bytes": 10097,
       "mediaType": "text/markdown"
     },
