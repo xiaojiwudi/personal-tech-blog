@@ -1,0 +1,11 @@
+---
+import type { PublicArticle } from "../lib/types";
+interface Props { article: PublicArticle }
+const { article } = Astro.props;
+---
+<article class="card" data-testid="article-card">
+  <p class="eyebrow">{article.primaryLayer}</p>
+  <h2><a href={`/articles/${article.slug}/`}>{article.title}</a></h2>
+  <p>{article.summary}</p>
+  <p class="meta">发布 {article.publishedAt} · 更新 {article.lastUpdated}</p>
+</article>

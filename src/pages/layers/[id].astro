@@ -1,0 +1,14 @@
+---
+import ArticleCard from "../../components/ArticleCard.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { LAYER_LABELS, publicationPromise } from "../../lib/site";
+export async function getStaticPaths() {
+  const publication = await publicationPromise;
+  return Object.entries(LAYER_LABELS).map(([id, label]) => ({ params: { id }, props: { label, articles: publication.articles.filter((article) => article.primaryLayer === id) } }));
+}
+const { label, articles } = Astro.props;
+---
+<BaseLayout title={`${label} · 个人技术博客`}>
+  <h1>{label}</h1>
+  {articles.length ? <div class="grid">{articles.map((article) => <ArticleCard article={article} />)}</div> : <p>这个层级暂时没有公开文章。</p>}
+</BaseLayout>

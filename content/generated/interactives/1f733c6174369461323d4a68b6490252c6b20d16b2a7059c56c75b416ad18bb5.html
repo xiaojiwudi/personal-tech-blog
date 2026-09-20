@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BERT 微调任务 · 交互演示</title>
+<style>
+:root{
+  --bg:#ffffff; --bg2:#f5f4f0; --bg3:#eeedea;
+  --tx:#1a1a18; --tx2:#6b6a65;
+  --border:rgba(0,0,0,0.12); --border2:rgba(0,0,0,0.22);
+  --bg-warning:#faeeda; --tx-warning:#633806; --border-warning:rgba(186,117,23,0.4);
+  --bg-info:#e6f1fb;    --tx-info:#0c447c;   --border-info:rgba(55,138,221,0.4);
+  --bg-success:#e1f5ee; --tx-success:#085041; --border-success:rgba(15,110,86,0.4);
+  --bg-danger:#fcebeb;  --tx-danger:#791f1f;  --border-danger:rgba(185,60,60,0.4);
+  --bg-sec:#f5f4f0;     --tx-sec:#6b6a65;     --border-sec:rgba(0,0,0,0.18);
+  --r:8px; --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#1c1c1a; --bg2:#262624; --bg3:#2e2e2c;
+    --tx:#eeecea; --tx2:#9c9a92;
+    --border:rgba(255,255,255,0.10); --border2:rgba(255,255,255,0.22);
+    --bg-warning:#2e1c03; --tx-warning:#fac775; --border-warning:rgba(239,159,39,0.4);
+    --bg-info:#0c2540;    --tx-info:#85b7eb;   --border-info:rgba(133,183,235,0.4);
+    --bg-success:#042c1e; --tx-success:#5dcaa5; --border-success:rgba(93,202,165,0.4);
+    --bg-danger:#2e0f0f;  --tx-danger:#f09595;  --border-danger:rgba(240,149,149,0.4);
+    --bg-sec:#242422;     --tx-sec:#9c9a92;     --border-sec:rgba(255,255,255,0.14);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:28px 24px 36px;max-width:680px;margin:0 auto;}
+h1{font-size:17px;font-weight:500;margin-bottom:4px;}
+.sub{font-size:13px;color:var(--tx2);margin-bottom:20px;line-height:1.6;}
+hr{border:none;border-top:0.5px solid var(--border);margin:18px 0;}
+.tab-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.tab{padding:7px 16px;font-size:13px;border-radius:var(--r);border:0.5px solid var(--border2);background:transparent;color:var(--tx2);cursor:pointer;font-family:var(--font);transition:all .15s;}
+.tab.active{background:var(--bg-info);color:var(--tx-info);border-color:var(--border-info);font-weight:500;}
+.card{background:var(--bg2);border-radius:var(--r);border:0.5px solid var(--border);padding:16px;}
+.card-desc{font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:14px;}
+.label{font-size:11px;color:var(--tx2);margin-bottom:6px;}
+.tok-wrap{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;}
+.tok{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 11px;border-radius:6px;font-size:13px;font-weight:500;border:0.5px solid transparent;}
+.lbl-wrap{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;}
+.lbl-chip{display:inline-flex;align-items:center;justify-content:center;height:22px;padding:0 11px;border-radius:20px;font-size:11px;font-weight:500;}
+.head-box{padding:10px 12px;background:var(--bg3);border-radius:var(--r);border:0.5px solid var(--border);margin-bottom:10px;}
+.head-label{font-size:11px;color:var(--tx2);margin-bottom:3px;}
+.head-val{font-size:13px;color:var(--tx);font-weight:500;}
+.result-box{padding:10px 12px;border-radius:var(--r);border:0.5px solid var(--border);}
+.result-label{font-size:11px;margin-bottom:2px;}
+.result-val{font-size:14px;font-weight:500;}
+.note{font-size:12px;color:var(--tx2);margin-top:10px;line-height:1.6;}
+</style>
+</head>
+<body>
+<h1>BERT 微调任务 · 交互演示</h1>
+<p class="sub">BERT 预训练完成后，只需在顶部加一个"任务头"，用少量标注数据微调即可解决各类 NLP 任务。点击不同任务查看输入格式和输出方式。</p>
+
+<div class="tab-row" id="tabs"></div>
+<div class="card" id="content"></div>
+
+<script>
+const tasks = [
+  {
+    name:'情感分类',
+    desc:'输入单句，用 [CLS] 位置的输出向量做分类预测。任务头只是一个线性层，参数极少，在少量标注数据上微调几轮即可。',
+    toks:['[CLS]','这部','电影','太','精彩','了','！','[SEP]'],
+    colors:['warning','info','info','info','info','info','info','sec'],
+    head:'[CLS] 向量 → 线性层（768→3）→ Softmax',
+    result:'正面情感（confidence: 0.92）',
+    rc:'success',
+    note:'[CLS] 经过 12 层双向注意力后，汇聚了全句语义信息，天然适合分类任务。'
+  },
+  {
+    name:'命名实体识别',
+    desc:'对每个 token 的输出向量分别做分类，使用 BIO 标注方案（B=开始，I=内部，O=非实体）。',
+    toks:['[CLS]','李明','在','北京','大学','学习','[SEP]'],
+    colors:['warning','info','sec','info','info','sec','sec'],
+    labels:['O','B-PER','O','B-ORG','I-ORG','O','O'],
+    labelColors:['sec','success','sec','info','info','sec','sec'],
+    head:'每个 token 的向量 → 线性层（768→标签数）→ NER 标签',
+    result:'"李明" = 人名（PER），"北京大学" = 机构名（ORG）',
+    rc:'info',
+    note:'与情感分类不同，NER 需要每个位置都输出预测，因此用全部 token 的向量而非只用 [CLS]。'
+  },
+  {
+    name:'阅读理解（SQuAD）',
+    desc:'将"问题"和"段落"拼在一起输入，预测答案在段落中的起始和结束位置。需要两个独立的线性层分别预测 start / end。',
+    toks:['[CLS]','谁发明了','电话','？','[SEP]','贝尔于','1876年','发明了','电话','[SEP]'],
+    colors:['warning','sec','sec','sec','sec','success','success','sec','sec','sec'],
+    head:'每个 token 的向量 → start 线性层 + end 线性层（共两个）',
+    result:'答案跨度："贝尔于 1876年"（pos 5–6）',
+    rc:'success',
+    note:'问题和段落拼在一起，Segment 嵌入区分两句，模型同时看到全部内容后定位答案。'
+  },
+  {
+    name:'自然语言推理（NLI）',
+    desc:'输入"前提 [SEP] 假设"，判断两句之间的逻辑关系：蕴含（entailment）、矛盾（contradiction）或中立（neutral）。',
+    toks:['[CLS]','猫坐在','垫子上','[SEP]','动物','在室内','[SEP]'],
+    colors:['warning','info','info','sec','success','success','sec'],
+    head:'[CLS] 向量 → 线性层（768→3）→ {蕴含, 矛盾, 中立}',
+    result:'蕴含（entailment）：0.88',
+    rc:'success',
+    note:'Segment 嵌入（EA / EB）让模型区分前提和假设，[CLS] 汇聚两句的语义关系后做三分类。'
+  }
+];
+
+let cur=0;
+
+function render(){
+  document.getElementById('tabs').innerHTML=tasks.map((t,i)=>
+    `<button class="tab${i===cur?' active':''}" onclick="sel(${i})">${t.name}</button>`
+  ).join('');
+
+  const t=tasks[cur];
+  const toksHtml=t.toks.map((tok,j)=>{
+    const c=t.colors[j];
+    return `<span class="tok" style="background:var(--bg-${c});color:var(--tx-${c});border-color:var(--border-${c})">${tok}</span>`;
+  }).join('');
+
+  const labelsHtml=t.labels?`
+    <div class="label" style="margin-top:6px">BIO 标注</div>
+    <div class="lbl-wrap">${t.labels.map((l,j)=>{
+      const c=t.labelColors[j];
+      return `<span class="lbl-chip" style="background:var(--bg-${c});color:var(--tx-${c})">${l}</span>`;
+    }).join('')}</div>
+  `:'';
+
+  document.getElementById('content').innerHTML=`
+    <div class="card-desc">${t.desc}</div>
+    <div class="label">模型输入</div>
+    <div class="tok-wrap">${toksHtml}</div>
+    ${labelsHtml}
+    <div class="head-box">
+      <div class="head-label">任务头</div>
+      <div class="head-val">${t.head}</div>
+    </div>
+    <div class="result-box" style="background:var(--bg-${t.rc});border-color:var(--border-${t.rc})">
+      <div class="result-label" style="color:var(--tx-${t.rc})">预测结果</div>
+      <div class="result-val" style="color:var(--tx-${t.rc})">${t.result}</div>
+    </div>
+    <div class="note">${t.note}</div>
+  `;
+}
+
+function sel(i){ cur=i; render(); }
+render();
+</script>
+</body>
+</html>

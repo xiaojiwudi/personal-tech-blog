@@ -1,0 +1,7 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { publicationPromise } from "../../lib/site";
+const publication = await publicationPromise;
+const tags = [...new Set(publication.articles.flatMap((article) => article.tags))].sort();
+---
+<BaseLayout title="标签 · 个人技术博客"><h1>标签</h1><ul class="tags">{tags.map((tag) => <li><a href={`/tags/${encodeURIComponent(tag)}/`}>{tag}</a></li>)}</ul></BaseLayout>

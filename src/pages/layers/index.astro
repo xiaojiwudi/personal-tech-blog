@@ -1,0 +1,9 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { LAYER_LABELS, publicationPromise } from "../../lib/site";
+const publication = await publicationPromise;
+---
+<BaseLayout title="知识层级 · 个人技术博客">
+  <h1>知识层级</h1>
+  <div class="grid">{Object.entries(LAYER_LABELS).map(([id, label]) => <a class="card" href={`/layers/${id}/`}><strong>{label}</strong><br />{publication.articles.filter((article) => article.primaryLayer === id).length} 篇</a>)}</div>
+</BaseLayout>

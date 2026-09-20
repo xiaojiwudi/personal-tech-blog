@@ -1,0 +1,24 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { publicationPromise } from "../../lib/site";
+
+export async function getStaticPaths() {
+  const publication = await publicationPromise;
+  return publication.articles.map((article) => ({ params: { slug: article.slug }, props: { article } }));
+}
+const { article } = Astro.props;
+---
+<BaseLayout title={`${article.title} · 个人技术博客`} description={article.summary} canonicalPath={`/articles/${article.slug}/`}>
+  <div class="article-layout">
+    <article class="prose" data-pagefind-body>
+      <p class="eyebrow">{article.primaryLayer} · 发布 {article.publishedAt} · 更新 {article.lastUpdated}</p>
+      <div set:html={article.html} />
+      <ul class="tags">{article.tags.map((tag) => <li><a href={`/tags/${encodeURIComponent(tag)}/`}>{tag}</a></li>)}</ul>
+      {article.backlinkSlugs.length > 0 && <section data-pagefind-ignore><h2>反向链接</h2><ul>{article.backlinkSlugs.map((slug) => <li><a href={`/articles/${slug}/`}>{slug}</a></li>)}</ul></section>}
+    </article>
+    <aside class="toc" data-pagefind-ignore>
+      <strong>目录</strong>
+      <ol>{article.headings.filter((heading) => heading.depth > 1).map((heading) => <li><a href={`#${heading.id}`}>{heading.text}</a></li>)}</ol>
+    </aside>
+  </div>
+</BaseLayout>

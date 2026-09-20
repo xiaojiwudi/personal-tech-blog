@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>从零开始的 Self-Attention</title>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+:root {
+  --bg: #F9F6F0;
+  --surface: #FDFCF8;
+  --text: #3D3538;
+  --text2: #8A8084;
+  --accent: #C2859F;
+  --accent2: #E0C5D3;
+  --accent-glow: rgba(194,133,159,.12);
+  --math: #594A50;
+  --line: rgba(120,105,110,.15);
+  --good: #7AA38B;
+  --warn: #C48B7A;
+  --blue: #8AA3B8;
+  --font-serif: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', Georgia, serif;
+  --font-mono: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+  --font-ui: system-ui, -apple-system, 'PingFang SC', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-serif);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 32px 16px 60px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* subtle grain texture on body */
+body::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+  opacity: .03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.container {
+  width: 100%; max-width: 820px;
+}
+
+/* ── navigation dots ── */
+.dots {
+  display: flex; gap: 8px; justify-content: center;
+  margin-bottom: 28px;
+}
+.dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--line); border: none; cursor: pointer;
+  transition: all .25s; padding: 0;
+}
+.dot.active {
+  background: var(--accent); transform: scale(1.35);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+.dot.done { background: var(--accent2); }
+
+/* ── scene container ── */
+.scene-box {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  min-height: 480px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 48px 56px;
+  overflow: hidden;
+}
+.scene-box::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent);
+  opacity: .4;
+}
+
+.scene {
+  position: absolute; inset: 48px 56px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+}
+.scene.active { opacity: 1; pointer-events: auto; }
+
+/* ── scene internals ── */
+.step-num {
+  font-family: var(--font-mono); font-size: 2.2rem;
+  color: var(--accent); opacity: .55;
+  margin-bottom: 4px; letter-spacing: -.02em;
+}
+.step-title {
+  font-family: var(--font-serif); font-size: 1.35rem;
+  font-weight: 400; color: var(--text);
+  text-align: center; margin-bottom: 18px;
+  letter-spacing: .01em;
+}
+.story-block {
+  background: var(--accent-glow);
+  border-left: 2px solid var(--accent);
+  padding: 16px 22px; margin-bottom: 24px;
+  font-size: .92rem; color: var(--text2);
+  font-family: var(--font-ui); line-height: 1.7;
+  max-width: 620px; text-align: left;
+}
+.story-block b { color: var(--accent); font-weight: 600; }
+
+.math-block {
+  font-family: var(--font-mono); font-size: .9rem;
+  color: var(--math); text-align: center;
+  line-height: 1.9; padding: 20px 28px;
+  background: var(--bg); margin-bottom: 20px;
+  max-width: 620px;
+}
+
+.insight-block {
+  display: flex; gap: 10px; align-items: flex-start;
+  font-size: .86rem; color: var(--text2);
+  max-width: 580px; line-height: 1.7;
+  margin-bottom: 20px;
+}
+.insight-block .marker {
+  width: 4px; height: 4px;
+  background: var(--blue); border-radius: 50%;
+  margin-top: 10px; flex-shrink: 0;
+}
+
+.viz-area {
+  width: 100%; max-width: 620px;
+  margin: 8px 0;
+  display: flex; align-items: center; justify-content: center;
+  flex-wrap: wrap; gap: 16px;
+}
+
+/* ── nav ── */
+.nav-row {
+  display: flex; gap: 12px; justify-content: center;
+  align-items: center; margin-top: 24px;
+}
+.nav-btn {
+  font-family: var(--font-ui); font-size: .85rem;
+  padding: 9px 26px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--text2);
+  cursor: pointer; transition: all .2s;
+  border-radius: 2px;
+}
+.nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+.nav-btn.primary {
+  background: var(--accent); color: var(--surface); border-color: var(--accent);
+}
+.nav-btn.primary:hover { opacity: .85; }
+.step-counter {
+  font-family: var(--font-mono); font-size: .82rem;
+  color: var(--text2); min-width: 60px; text-align: center;
+}
+
+/* ── links ── */
+.links-row {
+  margin-top: 20px; font-size: .8rem; color: var(--text2);
+  font-family: var(--font-ui); text-align: center;
+  line-height: 1.8;
+}
+.links-row a {
+  color: var(--accent); text-decoration: none;
+  border-bottom: 1px solid var(--accent2);
+}
+.links-row a:hover { border-color: var(--accent); }
+
+/* ── SVG viz ── */
+.viz-svg { width: 100%; max-width: 560px; height: auto; }
+
+/* ── bar chart viz ── */
+.bar-group { display: flex; gap: 18px; align-items: flex-end; }
+.bar-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.bar-val { font-family: var(--font-mono); font-size: .75rem; color: var(--text2); }
+.bar-fill { width: 52px; border-radius: 2px 2px 0 0; transition: height .5s; }
+.bar-label { font-size: .72rem; color: var(--text2); margin-top: 4px; font-family: var(--font-ui); }
+
+/* ── responsive ── */
+@media (max-width: 640px) {
+  .scene-box { padding: 32px 20px; min-height: 400px; }
+  .scene { inset: 32px 20px; }
+  .step-num { font-size: 1.6rem; }
+  .step-title { font-size: 1.15rem; }
+  .story-block, .math-block { font-size: .82rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="dots" id="dots"></div>
+
+  <div class="scene-box" id="sceneBox">
+    <!-- scenes injected by JS -->
+  </div>
+
+  <div class="nav-row">
+    <button class="nav-btn" id="prevBtn">← 上一步</button>
+    <span class="step-counter" id="stepCounter"></span>
+    <button class="nav-btn primary" id="nextBtn">下一步 →</button>
+  </div>
+
+  <div class="links-row" id="linksRow"></div>
+</div>
+
+<script>
+// ============ STEP DATA ============
+const steps = [
+  {
+    num: "0", title: "你是一个 token",
+    story: "想象你是一个词向量 <b>x₃</b>，坐在序列的第 3 位。<br>前面是「猫」，后面是「坐」。你要生成自己的新表示。<br><br>但你需要知道：<b>该关注谁？关注多少？</b><br>这就是 Self-Attention 要解决的问题——让数据自己决定。",
+    math: null,
+    insight: "CNN 的权重是固定的（同一个核滑过全图），RNN 的权重沿时间共享。Self-Attention 的不同之处：<b>连接强度由数据内容动态决定</b>。",
+    links: [["CNN：固定权重的局部特征提取", "cnn"], ["RNN：循环传递 vs 一步到位", "rnn"]],
+    viz: viz0
+  },
+  {
+    num: "1", title: "线性投影：换三副眼镜",
+    story: "同一个 <b>x₃</b> 要同时扮演三个角色：<br><br><b>Query</b>：「我想找什么样的信息？」<br><b>Key</b>：「我是谁，别人怎么找到我？」<br><b>Value</b>：「我身上带着什么内容？」<br><br>通过三个可学习的投影矩阵 W_Q、W_K、W_V 实现。<br>网络用反向传播自己学会「哪些方向适合做查询，哪些适合做索引」。",
+    math: "Q = X·W_Q    K = X·W_K    V = X·W_V\n其中 X ∈ ℝⁿˣᵈ,  W ∈ ℝᵈˣᵈᵏ",
+    insight: "同一个向量 x₃，在 W_Q 坐标系里坐标是 q₃，在 W_K 里是 k₃。<br>这是<b>可微分的坐标系选择</b>——不靠人工设计，靠梯度下降学。",
+    links: [["MLP：线性变换 + 非线性的基本单元", "mlp"], ["反向传播：W_Q/W_K/W_V 怎么学出来的", "backpropagation"]],
+    viz: viz1
+  },
+  {
+    num: "2", title: "QKᵀ：点积测量相关性",
+    story: "第 i 个 token 想知道「我该关注第 j 个多少？」<br><br>答案：看它们的 Query 和 Key <b>在方向上有多对齐</b>。<br><br>qᵢ · kⱼ = ‖qᵢ‖ · ‖kⱼ‖ · cos θ<br><br>方向一致 (cos θ ≈ 1) → 高相关 →「该看你」<br>方向正交 (cos θ ≈ 0) → 无关<br>方向相反 (cos θ ≈ −1) → 反相关 → softmax 后趋近 0",
+    math: "S = QKᵀ\nSᵢⱼ = qᵢ · kⱼ = ‖qᵢ‖ ‖kⱼ‖ cos θᵢⱼ",
+    insight: "为什么用点积？因为它在高维空间里天然测量<b>方向一致性</b>。<br>网络通过调整 W_Q 和 W_K，把「应该互相看到」的 token 的 Query 和 Key 方向对齐。",
+    links: [["CNN 的卷积核也是点积", "cnn"]],
+    viz: viz2
+  },
+  {
+    num: "3", title: "÷√dₖ：对抗高维方差爆炸",
+    story: "dₖ = 64 时，随机点积典型值 ±8。<br>dₖ = 512 时，膨胀到 ±22。<br><br>原因：dₖ 个独立分量相加，方差 = dₖ。<br><br>如果不除 √dₖ：点积太大 → softmax 趋近 <b>one-hot</b><br>→ 梯度 ≈ 0 → <b>网络学不动了</b>。",
+    math: "Var(q·k) = dₖ  →  Std(q·k) = √dₖ\n除以 √dₖ 后：Var = 1\n→ softmax 保持「有区分度但可训练」",
+    insight: "太冷 → 均匀分布（没选择性）。太热 → one-hot（梯度消失）。<br>除以 √dₖ 刚好让 softmax 落在可训练的中间温度。<br>这一步直接关系到<b>反向传播中 softmax 的梯度质量</b>。",
+    links: [["反向传播：梯度消失的根源", "backpropagation"], ["LSTM：门控机制也是为了让梯度顺畅", "lstm"]],
+    viz: viz3
+  },
+  {
+    num: "4", title: "softmax：分数变成注意力预算",
+    story: "softmax 做两件事：<br><br>① 非负化：eˣ > 0，注意力权重永远是正的<br>② 归一化：每行和为 1，是 100% 的注意力预算<br><br>Aᵢⱼ =「第 i 个 token 把注意力的百分之几给了第 j 个 token」",
+    math: "A = softmax(S / √dₖ)\nAᵢⱼ = exp(Sᵢⱼ/√dₖ) / Σₖ exp(Sᵢₖ/√dₖ)\n每行：Σⱼ Aᵢⱼ = 1",
+    insight: "softmax 把点积分数组映射到<b>概率单纯形</b>上。<br>√dₖ 在这里扮演「温度」——温度越低分布越尖，越高越均匀。",
+    links: [["反向传播：softmax 的梯度推导", "backpropagation"]],
+    viz: viz4
+  },
+  {
+    num: "5", title: "左乘 V：按权重聚合信息",
+    story: "最后一步：用注意力权重对所有 Value 做<b>加权平均</b>。<br><br>output₃ = A₃₁·v₁ + A₃₂·v₂ + A₃₃·v₃ + ...<br><br>如果 A₃₁ = 0.8（80% 注意力给了「猫」），那 output₃<br>几乎就是「猫」的语义内容。",
+    math: "Output = AV\noutputᵢ = Σⱼ Aᵢⱼ · vⱼ\nΣⱼ Aᵢⱼ = 1  →  凸组合",
+    insight: "outputᵢ 落在所有 Value 向量的<b>凸包</b>内，不能「跑出去」。<br>Self-Attention 只做<b>重组</b>（插值），不做变换。<br>这就是为什么后面必须接 FFN（MLP）做非线性。",
+    links: [["MLP：为什么 Self-Attention 之后必须接非线性", "mlp"], ["concat：Multi-Head 拼接也是一种聚合", "concat"]],
+    viz: viz5
+  },
+  {
+    num: "6", title: "完整走一遍",
+    story: "五个 token「猫 坐 在 垫子 上」，走完投影→点积→缩放→softmax→聚合。<br><br>每个 token 从孤立的词向量变成<b>富含上下文的新表示</b>。<br><br>整个过程完全可微——从 loss 反向传播，更新 W_Q、W_K、W_V，<br>让网络学会「什么情况下该关注谁」。",
+    math: "Attention(Q,K,V) = softmax(QKᵀ / √dₖ) V\n\nMultiHead(X) = Concat(head₁,...,headₕ) W_O\nheadᵢ = Attention(XW_Qi, XW_Ki, XW_Vi)",
+    insight: "Self-Attention 不是魔法。是<b>线性投影 + 点积 + 缩放 + softmax + 加权平均</b>的组合。<br>每一步都可微，每一步都有几何含义。理解这些，Transformer 就不再神秘。",
+    links: [
+      ["Transformer 完整架构", "transformer"],
+      ["深度学习五大构件", "deep-learning-building-blocks"],
+      ["反向传播：这一切如何被训练", "backpropagation"],
+      ["LSTM：被 Transformer 替代的前代", "lstm"]
+    ],
+    viz: viz6
+  }
+];
+
+// ============ VISUALIZATIONS ============
+
+function viz0(el) {
+  el.innerHTML = `
+    <svg class="viz-svg" viewBox="0 0 560 180">
+      <defs>
+        <radialGradient id="g0"><stop offset="0%" stop-color="${getComputedStyle(document.documentElement).getPropertyValue('--accent-glow').trim()}"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+      </defs>
+      ${[['猫',60],['坐',190],['???',320],['垫子',450],['上',580]].map(([t,x],i)=>{
+        const isQ = i===2;
+        return `
+        <circle cx="${x}" cy="90" r="24" fill="${isQ?'var(--accent-glow)':'var(--bg)'}" stroke="${isQ?'var(--accent)':'var(--line)'}" stroke-width="${isQ?2:1}"/>
+        <text x="${x}" y="95" text-anchor="middle" font-family="system-ui" font-size="14" fill="${isQ?'var(--accent)':'var(--text2)'}">${t}</text>
+        ${isQ ? [0,1,3,4].map(j=>{
+          const tx = [60,190,450,580][j>2?j-1:j];
+          return `<line x1="${x}" y1="66" x2="${tx}" y2="66" stroke="var(--accent2)" stroke-width="1" stroke-dasharray="4 3" opacity=".6"/>`;
+        }).join('') : ''}
+        ${isQ ? `<circle cx="${x+28}" cy="62" r="7" fill="var(--surface)" stroke="var(--accent)" stroke-width="1"/><text x="${x+28}" y="66" text-anchor="middle" font-size="11" fill="var(--accent)">?</text>` : ''}
+      `;}).join('')}
+      <text x="280" y="150" text-anchor="middle" font-family="var(--font-serif)" font-size="13" fill="var(--text2)">「我该看谁？每个人看多少？」</text>
+    </svg>`;
+}
+
+function viz1(el) {
+  el.innerHTML = `
+    <svg class="viz-svg" viewBox="0 0 560 200">
+      <defs><marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--text2)" opacity=".4"/></marker></defs>
+      <circle cx="80" cy="100" r="18" fill="var(--accent-glow)" stroke="var(--accent)" stroke-width="1.5"/>
+      <text x="80" y="105" text-anchor="middle" font-family="var(--font-mono)" font-size="14" fill="var(--accent)">x₃</text>
+
+      <line x1="100" y1="95" x2="200" y2="50" stroke="var(--text2)" stroke-width="1" opacity=".5" marker-end="url(#arr)"/>
+      <line x1="100" y1="100" x2="200" y2="100" stroke="var(--text2)" stroke-width="1" opacity=".5" marker-end="url(#arr)"/>
+      <line x1="100" y1="105" x2="200" y2="150" stroke="var(--text2)" stroke-width="1" opacity=".5" marker-end="url(#arr)"/>
+
+      <line x1="220" y1="50" x2="270" y2="30" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="220" y1="100" x2="270" y2="105" stroke="var(--blue)" stroke-width="2"/>
+      <line x1="220" y1="150" x2="270" y2="170" stroke="var(--good)" stroke-width="2"/>
+
+      <text x="290" y="35" font-family="var(--font-mono)" font-size="14" fill="var(--accent)">q₃</text>
+      <text x="290" y="110" font-family="var(--font-mono)" font-size="14" fill="var(--blue)">k₃</text>
+      <text x="290" y="175" font-family="var(--font-mono)" font-size="14" fill="var(--good)">v₃</text>
+
+      <text x="340" y="35" font-family="var(--font-ui)" font-size="11" fill="var(--text2)">查询</text>
+      <text x="340" y="110" font-family="var(--font-ui)" font-size="11" fill="var(--text2)">索引</text>
+      <text x="340" y="175" font-family="var(--font-ui)" font-size="11" fill="var(--text2)">内容</text>
+    </svg>`;
+}
+
+function viz2(el) {
+  el.innerHTML = `
+    <svg class="viz-svg" viewBox="0 0 560 180">
+      <line x1="180" y1="130" x2="280" y2="70" stroke="var(--accent)" stroke-width="2.5"/>
+      <line x1="180" y1="130" x2="260" y2="150" stroke="var(--blue)" stroke-width="2"/>
+      <text x="295" y="70" font-family="var(--font-mono)" font-size="15" fill="var(--accent)">qᵢ</text>
+      <text x="270" y="168" font-family="var(--font-mono)" font-size="15" fill="var(--blue)">kⱼ</text>
+      <path d="M210,125 A28,28 0 0,1 225,105" fill="none" stroke="var(--warn)" stroke-width="1.5"/>
+      <text x="238" y="112" font-family="var(--font-serif)" font-size="15" fill="var(--warn)">θ</text>
+      <text x="380" y="90" font-family="var(--font-mono)" font-size="13" fill="var(--math)">qᵢ·kⱼ = ‖qᵢ‖‖kⱼ‖cosθ</text>
+      <text x="380" y="112" font-family="var(--font-serif)" font-size="12" fill="var(--text2)">方向一致 → 高相关</text>
+      <text x="380" y="132" font-family="var(--font-serif)" font-size="12" fill="var(--text2)">正交 → 无关</text>
+      <text x="380" y="152" font-family="var(--font-serif)" font-size="12" fill="var(--text2)">反向 → 反相关</text>
+    </svg>`;
+}
+
+function viz3(el) {
+  const data1 = [1,1,89,3,6];
+  const data2 = [16,11,41,17,14];
+  const labels = ['tok₁','tok₂','tok₃','tok₄','tok₅'];
+  el.innerHTML = `
+    <div style="display:flex;gap:40px;align-items:flex-end;">
+      <div style="text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-family:var(--font-ui)">无 √dₖ 缩放</div>
+        <div class="bar-group" style="height:140px;">
+          ${data1.map((v,i)=>`
+            <div class="bar-col">
+              <div class="bar-fill" style="height:${v*1.4}px;background:var(--warn);opacity:${.3+v/150}"></div>
+              <div class="bar-val">${v}%</div>
+              <div class="bar-label">${labels[i]}</div>
+            </div>`).join('')}
+        </div>
+        <div style="font-size:11px;color:var(--warn);margin-top:6px;">one-hot，梯度 ≈ 0</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-family:var(--font-ui)">有 √dₖ 缩放</div>
+        <div class="bar-group" style="height:140px;">
+          ${data2.map((v,i)=>`
+            <div class="bar-col">
+              <div class="bar-fill" style="height:${v*1.4}px;background:var(--good);opacity:${.4+v/200}"></div>
+              <div class="bar-val">${v}%</div>
+              <div class="bar-label">${labels[i]}</div>
+            </div>`).join('')}
+        </div>
+        <div style="font-size:11px;color:var(--good);margin-top:6px;">温和分布，可训练</div>
+      </div>
+    </div>`;
+}
+
+function viz4(el) {
+  const scores = [1.2, -0.3, 2.8, -0.8, 0.4];
+  const probs = [14, 3, 72, 2, 9];
+  const labels = ['tok₁','tok₂','tok₃','tok₄','tok₅'];
+  el.innerHTML = `
+    <div style="display:flex;gap:40px;align-items:flex-end;">
+      <div style="text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-family:var(--font-ui)">原始分数 Sᵢ</div>
+        <div class="bar-group" style="height:110px;">
+          ${scores.map((v,i)=>`
+            <div class="bar-col">
+              <div class="bar-fill" style="height:${Math.max(8, v*24+40)}px;background:var(--accent2);opacity:.5"></div>
+              <div class="bar-val">${v}</div>
+              <div class="bar-label">${labels[i]}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div style="font-size:20px;color:var(--accent)">→</div>
+      <div style="text-align:center;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-family:var(--font-ui)">注意力权重 Aᵢ</div>
+        <div class="bar-group" style="height:110px;">
+          ${probs.map((v,i)=>`
+            <div class="bar-col">
+              <div class="bar-fill" style="height:${v*1.2}px;background:var(--good);opacity:${.5+v/200}"></div>
+              <div class="bar-val">${v}%</div>
+              <div class="bar-label">${labels[i]}</div>
+            </div>`).join('')}
+        </div>
+        <div style="font-size:11px;color:var(--good);margin-top:2px;">总和 = 100%</div>
+      </div>
+    </div>`;
+}
+
+function viz5(el) {
+  const vals = [
+    {dx:40,dy:-30,c:'var(--accent)',l:'v₁',w:.12},
+    {dx:-30,dy:-45,c:'var(--blue)',l:'v₂',w:.04},
+    {dx:15,dy:55,c:'var(--good)',l:'v₃',w:.60},
+    {dx:-50,dy:15,c:'var(--warn)',l:'v₄',w:.08},
+    {dx:50,dy:-8,c:'var(--accent2)',l:'v₅',w:.16}
+  ];
+  const cx=200, cy=100;
+  let sx=0, sy=0;
+  vals.forEach(v=>{sx+=v.dx*v.w; sy+=v.dy*v.w;});
+
+  const lines = vals.map(v=>{
+    const ex=cx+v.dx, ey=cy+v.dy;
+    return `<line x1="${cx}" y1="${cy}" x2="${ex}" y2="${ey}" stroke="${v.c}" stroke-width="${v.w>0.5?3:1.2}" opacity="${.4+v.w*.6}"/>`;
+  }).join('');
+
+  el.innerHTML = `
+    <svg class="viz-svg" viewBox="0 0 560 220">
+      ${lines}
+      <line x1="${cx}" y1="${cy}" x2="${cx+sx}" y2="${cy+sy}" stroke="var(--accent)" stroke-width="3"/>
+      ${vals.map(v=>`<text x="${cx+v.dx+6}" y="${cy+v.dy}" font-family="var(--font-mono)" font-size="12" fill="${v.c}">${v.l}</text>`).join('')}
+      <text x="${cx+sx+8}" y="${cy+sy}" font-family="var(--font-mono)" font-size="13" fill="var(--accent)">output</text>
+      <text x="280" y="190" font-family="var(--font-serif)" font-size="12" fill="var(--text2)">加权平均 = 凸组合 → output 在凸包内</text>
+    </svg>`;
+}
+
+function viz6(el) {
+  const tokens = ['猫','坐','在','垫子','上'];
+  const stages = ['① 投影','② QKᵀ','③ ÷√dₖ','④ softmax','⑤ 聚合'];
+  const cols = ['var(--accent)','var(--blue)','var(--good)','var(--warn)','var(--accent2)'];
+  const sx=90, sy=30, dx=90, dy=38;
+
+  let html = '<svg class="viz-svg" viewBox="0 0 560 230">';
+  stages.forEach((st,si)=>{
+    html += `<text x="10" y="${sy+si*dy+22}" font-family="var(--font-ui)" font-size="11" fill="var(--text2)">${st}</text>`;
+    tokens.forEach((t,ti)=>{
+      const tx = sx+ti*dx;
+      html += `<circle cx="${tx}" cy="${sy+si*dy+18}" r="12" fill="${si===4?cols[ti]:'var(--bg)'}" stroke="${si===4?cols[ti]:'var(--line)'}" stroke-width="${si===4?2:1}"/>`;
+      html += `<text x="${tx}" y="${sy+si*dy+22}" text-anchor="middle" font-family="system-ui" font-size="10" fill="${si===4?cols[ti]:'var(--text2)'}">${t}</text>`;
+      if(si<4){
+        html += `<line x1="${tx}" y1="${sy+si*dy+30}" x2="${tx}" y2="${sy+(si+1)*dy+6}" stroke="var(--line)" stroke-width=".5" opacity=".3"/>`;
+      }
+    });
+  });
+  html += '</svg>';
+  el.innerHTML = html;
+}
+
+// ============ STATE ============
+let current = 0;
+let prevScene = null;
+
+function render() {
+  const s = steps[current];
+
+  // Build scene HTML
+  const box = document.getElementById('sceneBox');
+  box.innerHTML = '';
+
+  const div = document.createElement('div');
+  div.className = 'scene active';
+  div.innerHTML = `
+    <div class="step-num">${s.num}</div>
+    <div class="step-title">${s.title}</div>
+    ${s.story ? `<div class="story-block">${s.story}</div>` : ''}
+    ${s.math ? `<div class="math-block">${s.math.replace(/\n/g,'<br>')}</div>` : ''}
+    ${s.insight ? `<div class="insight-block"><span class="marker"></span><span>${s.insight}</span></div>` : ''}
+    <div class="viz-area" id="vizArea"></div>
+  `;
+  box.appendChild(div);
+
+  // Render viz
+  if (s.viz) s.viz(document.getElementById('vizArea'));
+
+  // Animate in
+  gsap.fromTo(div, {opacity:0, y:16}, {opacity:1, y:0, duration:.35, ease:'power3.out'});
+
+  // Update dots
+  document.querySelectorAll('.dot').forEach((d,i)=>{
+    d.classList.remove('active','done');
+    if (i < current) d.classList.add('done');
+    if (i === current) d.classList.add('active');
+  });
+
+  // Update nav
+  document.getElementById('prevBtn').style.visibility = current===0 ? 'hidden' : 'visible';
+  const nb = document.getElementById('nextBtn');
+  if (current === steps.length-1) {
+    nb.textContent = '↺ 从头开始';
+    nb.onclick = ()=>{ current=0; render(); };
+  } else {
+    nb.textContent = '下一步 →';
+    nb.onclick = next;
+  }
+  document.getElementById('stepCounter').textContent = `${current+1} / ${steps.length}`;
+
+  // Update links
+  const lr = document.getElementById('linksRow');
+  if (s.links && s.links.length) {
+    lr.innerHTML = '知识库关联：' + s.links.map(([name,page])=>
+      `<a href="#" onclick="return false" title="${name}">${name}</a>`
+    ).join('  ·  ');
+  } else {
+    lr.innerHTML = '';
+  }
+}
+
+function next() {
+  if (current < steps.length-1) { current++; render(); }
+}
+function prev() {
+  if (current > 0) { current--; render(); }
+}
+function goTo(i) { current = i; render(); }
+
+// Init dots
+const dotsEl = document.getElementById('dots');
+dotsEl.innerHTML = steps.map((_,i)=>`<button class="dot${i===0?' active':''}" onclick="goTo(${i})"></button>`).join('');
+
+// Keyboard
+document.addEventListener('keydown', e=>{
+  if (e.key==='ArrowRight'||e.key==='ArrowDown') next();
+  if (e.key==='ArrowLeft'||e.key==='ArrowUp') prev();
+});
+
+render();
+</script>
+</body>
+</html>

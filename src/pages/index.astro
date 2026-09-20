@@ -1,0 +1,22 @@
+---
+import ArticleCard from "../components/ArticleCard.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { LAYER_LABELS, publicationPromise } from "../lib/site";
+const publication = await publicationPromise;
+const layerCounts = Object.entries(LAYER_LABELS).map(([id, label]) => ({ id, label, count: publication.articles.filter((article) => article.primaryLayer === id).length }));
+---
+<BaseLayout>
+  <section class="hero">
+    <p class="eyebrow">ROBOTICS · AI · SYSTEMS</p>
+    <h1>个人技术博客</h1>
+    <p>从底层原理、工程直觉和真实项目出发，整理机器人与 AI 技术知识。</p>
+  </section>
+  <section>
+    <h2>按知识层级探索</h2>
+    <div class="grid">{layerCounts.map((layer) => <a class="card" href={`/layers/${layer.id}/`}><strong>{layer.label}</strong><br />{layer.count} 篇文章</a>)}</div>
+  </section>
+  <section>
+    <h2>最近发布</h2>
+    <div class="grid">{publication.articles.slice(0, 6).map((article) => <ArticleCard article={article} />)}</div>
+  </section>
+</BaseLayout>

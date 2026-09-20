@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自注意力权重 · 交互演示</title>
+<style>
+:root {
+  --bg:#ffffff; --bg2:#f5f4f0; --bg3:#eeedea;
+  --tx:#1a1a18; --tx2:#6b6a65;
+  --border:rgba(0,0,0,0.12); --border2:rgba(0,0,0,0.22);
+  --purple:#7F77DD; --teal:#1D9E75; --amber:#BA7517;
+  --bg-warning:#faeeda; --tx-warning:#633806; --border-warning:rgba(186,117,23,0.4);
+  --bg-info:#e6f1fb; --tx-info:#0c447c; --border-info:rgba(55,138,221,0.4);
+  --r:8px; --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono:'Menlo','Monaco','Courier New',monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#1c1c1a; --bg2:#262624; --bg3:#2e2e2c;
+    --tx:#eeecea; --tx2:#9c9a92;
+    --border:rgba(255,255,255,0.10); --border2:rgba(255,255,255,0.22);
+    --purple:#AFA9EC; --teal:#5DCAA5; --amber:#EF9F27;
+    --bg-warning:#2e1c03; --tx-warning:#fac775; --border-warning:rgba(239,159,39,0.4);
+    --bg-info:#0c2540; --tx-info:#85b7eb; --border-info:rgba(133,183,235,0.4);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:28px 24px 36px;max-width:680px;margin:0 auto;}
+h1{font-size:17px;font-weight:500;margin-bottom:4px;}
+.sub{font-size:13px;color:var(--tx2);margin-bottom:20px;line-height:1.6;}
+hr{border:none;border-top:0.5px solid var(--border);margin:18px 0;}
+.tok-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.tok-btn{
+  padding:7px 16px;font-size:14px;border-radius:var(--r);
+  border:0.5px solid var(--border2);background:transparent;
+  color:var(--tx2);cursor:pointer;font-family:var(--font);transition:all .15s;
+}
+.tok-btn.active{background:var(--bg-warning);color:var(--tx-warning);border-color:var(--border-warning);font-weight:500;}
+canvas{display:block;width:100%;border-radius:var(--r);border:0.5px solid var(--border);margin:0 auto 14px;}
+.src-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.src-chip{
+  padding:5px 14px;font-size:13px;border-radius:var(--r);
+  border:0.5px solid var(--border);background:var(--bg2);
+  color:var(--tx2);transition:all .15s;
+}
+.explain{
+  padding:12px 14px;background:var(--bg2);border-radius:var(--r);
+  border:0.5px solid var(--border);font-size:13px;color:var(--tx2);line-height:1.7;
+}
+.explain strong{color:var(--tx);font-weight:500;}
+.info{margin-top:14px;padding:12px 14px;background:var(--bg2);border-radius:var(--r);border:0.5px solid var(--border);font-size:13px;color:var(--tx2);line-height:1.7;}
+</style>
+</head>
+<body>
+<h1>自注意力权重 · 交互演示</h1>
+<p class="sub">选择句子中的一个词作为 Query，观察它对其他词的注意力权重分布。这正是 Transformer 编码器层内部发生的事。</p>
+
+<div style="font-size:12px;color:var(--tx2);margin-bottom:8px;">点击选择词（作为 Query）</div>
+<div class="tok-row" id="tok-row"></div>
+
+<canvas id="c" height="220"></canvas>
+
+<div style="font-size:12px;color:var(--tx2);margin-bottom:8px;">注意力权重分布（源词）</div>
+<div class="src-row" id="src-row"></div>
+<div class="explain" id="explain"></div>
+
+<div class="info">
+  <strong>自注意力公式：</strong>Attention(Q,K,V) = softmax(QKᵀ / √d_k) · V<br>
+  每个词同时扮演三个角色：Q（我想找什么）、K（我能提供什么）、V（我实际的内容）。
+  注意力权重越高，颜色越深，说明这两个词的语义关联越强。
+</div>
+
+<script>
+const tokens = ['The','cat','sat','on','the','mat'];
+const isDark = matchMedia('(prefers-color-scheme:dark)').matches;
+const weights = [
+  [0.38,0.22,0.10,0.08,0.14,0.08],
+  [0.10,0.42,0.28,0.06,0.08,0.06],
+  [0.06,0.28,0.36,0.10,0.06,0.14],
+  [0.08,0.08,0.12,0.38,0.16,0.18],
+  [0.22,0.08,0.06,0.12,0.36,0.16],
+  [0.06,0.08,0.16,0.14,0.18,0.38],
+];
+const explains = [
+  '"The" 最关注自身（38%）和 "cat"（22%）—— 冠词天然依附于名词。',
+  '"cat" 强烈关注自身（42%）和 "sat"（28%）—— 主语在编码阶段就找到了它的谓语。',
+  '"sat" 同时关注 "cat"（28%）和 "mat"（14%）—— 动词连接主语和宾语。',
+  '"on" 主要关注自身（38%）和 "mat"（18%）—— 介词依附于后面的名词。',
+  '第二个 "the" 关注 "mat"（16%）和第一个 "The"（22%）—— 冠词跨位识别。',
+  '"mat" 关注自身（38%）并兼顾 "on"（14%）、"sat"（16%）—— 宾语连接整个谓语结构。',
+];
+let cur = 2;
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const col = {
+  barBg: isDark?'rgba(175,169,236,0.08)':'rgba(83,74,183,0.06)',
+  bar: isDark?'#AFA9EC':'#534AB7',
+  active: isDark?'#EF9F27':'#BA7517',
+  text: isDark?'rgba(255,255,255,0.70)':'rgba(0,0,0,0.65)',
+  textSec: isDark?'rgba(255,255,255,0.35)':'rgba(0,0,0,0.32)',
+  axis: isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)',
+};
+
+function resize(){
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = 220 * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  draw();
+}
+
+function draw(){
+  const W=canvas.offsetWidth, H=220;
+  ctx.clearRect(0,0,W,H);
+  const n=tokens.length, pL=72, pR=16, pT=36, pB=48;
+  const bw=(W-pL-pR)/n-6, maxH=H-pT-pB;
+
+  // grid lines
+  [0.25,0.5,0.75,1].forEach(v=>{
+    const y=pT+maxH-v*maxH;
+    ctx.strokeStyle=col.axis; ctx.lineWidth=0.4;
+    ctx.beginPath(); ctx.moveTo(pL,y); ctx.lineTo(W-pR,y); ctx.stroke();
+    ctx.fillStyle=col.textSec; ctx.font='10px monospace';
+    ctx.textAlign='right'; ctx.fillText((v*100).toFixed(0)+'%', pL-4, y+3);
+  });
+
+  tokens.forEach((tok,j)=>{
+    const a=weights[cur][j];
+    const x=pL+j*(W-pL-pR)/n+3;
+    const barH=a*maxH;
+
+    ctx.fillStyle=col.barBg;
+    ctx.beginPath(); ctx.roundRect(x,pT,bw,maxH,4); ctx.fill();
+
+    ctx.fillStyle=j===cur?col.active:col.bar;
+    ctx.globalAlpha=0.22+a*0.78;
+    ctx.beginPath(); ctx.roundRect(x, pT+maxH-barH, bw, barH, 4); ctx.fill();
+    ctx.globalAlpha=1;
+
+    ctx.fillStyle=j===cur?col.active:col.text;
+    ctx.font=j===cur?'500 13px sans-serif':'13px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText(tok, x+bw/2, H-pB+16);
+
+    if(a>0.08||j===cur){
+      ctx.fillStyle=j===cur?col.active:col.text;
+      ctx.font=j===cur?'500 12px monospace':'11px monospace';
+      ctx.fillText((a*100).toFixed(0)+'%', x+bw/2, pT+maxH-barH-6);
+    }
+  });
+
+  ctx.fillStyle=col.text; ctx.font='11px sans-serif';
+  ctx.textAlign='right'; ctx.fillText('注意力权重', pL-4, pT+maxH/2+4);
+}
+
+function buildUI(){
+  document.getElementById('tok-row').innerHTML=tokens.map((t,i)=>`
+    <button class="tok-btn${i===cur?' active':''}" onclick="sel(${i})">${t}</button>
+  `).join('');
+  document.getElementById('src-row').innerHTML=tokens.map((t,j)=>{
+    const a=weights[cur][j];
+    return `<div class="src-chip" style="opacity:${0.3+a*0.7};font-weight:${a>0.3?500:400};">${t} <span style="font-size:11px">${(a*100).toFixed(0)}%</span></div>`;
+  }).join('');
+  document.getElementById('explain').innerHTML=`<strong>观察：</strong>${explains[cur]}`;
+}
+
+function sel(i){ cur=i; buildUI(); draw(); }
+
+window.addEventListener('resize', resize);
+buildUI();
+resize();
+</script>
+</body>
+</html>

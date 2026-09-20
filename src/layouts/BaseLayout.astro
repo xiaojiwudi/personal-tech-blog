@@ -1,0 +1,45 @@
+---
+import "katex/dist/katex.min.css";
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+  canonicalPath?: string;
+}
+
+const {
+  title = "个人技术博客",
+  description = "机器人、AI 与软件系统的结构化技术笔记。",
+  canonicalPath = Astro.url.pathname
+} = Astro.props;
+const canonical = new URL(canonicalPath, Astro.site);
+---
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta name="twitter:card" content="summary" />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" type="application/rss+xml" title="个人技术博客 RSS" href="/rss.xml" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/">个人技术博客</a>
+      <nav aria-label="主导航">
+        <a href="/layers/">知识层级</a>
+        <a href="/tags/">标签</a>
+        <a href="/search/">搜索</a>
+      </nav>
+    </header>
+    <main><slot /></main>
+    <footer>Markdown from robot-kb · Built as a static site</footer>
+  </body>
+</html>

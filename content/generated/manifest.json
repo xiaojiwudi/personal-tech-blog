@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "repository": "robot-kb",
+    "commitSha": "4f13b771873b30d503b7d870288d69baac4dba08"
+  },
+  "articles": [
+    {
+      "slug": "ai-agent-architecture",
+      "path": "articles/ai-agent-architecture.md",
+      "sha256": "43ea5d68d223e4affeb0033bfe07d04b02a07f4aebc00fa31fa27747c63e1694",
+      "resources": []
+    },
+    {
+      "slug": "backpropagation",
+      "path": "articles/backpropagation.md",
+      "sha256": "f9daeea579f0081eccf3b3423611237a9d8e9f24589dc322201cddb3a5081635",
+      "resources": [
+        "interactives/0b89d14d3ddc7a4e7fc005f32262f564c38b8a4505cd654aefd4211d93c6012b.html",
+        "interactives/5e6f3715824715dbc69af132c4f9088b8aeb9d2b4cb3035916b20238e4a56e65.html",
+        "interactives/64c42061cc0ecce2a7a2c76163a99bcd20b111c70a0b0c1190f2d9e242c8440f.html"
+      ]
+    },
+    {
+      "slug": "kalman-filter-explained",
+      "path": "articles/kalman-filter-explained.md",
+      "sha256": "521250e0c327fff85d9ff0ecbcf906aecd3bb4e54ced32b31cf760b36804b94d",
+      "resources": []
+    },
+    {
+      "slug": "transformer",
+      "path": "articles/transformer.md",
+      "sha256": "e595475afb1e54e85d7d84efa1121d96a263db4b4475def926d28cacdbab705f",
+      "resources": [
+        "interactives/1f733c6174369461323d4a68b6490252c6b20d16b2a7059c56c75b416ad18bb5.html",
+        "interactives/551e0742e11619176052b23927ed63bcba0215f69342f2ba99957f6d4486dfe2.html",
+        "interactives/73f339df0626fb6edcbf80fcb6c919377e693ede5ff560d098e5d9ab75934c9a.html"
+      ]
+    },
+    {
+      "slug": "yolo-evaluation-metrics",
+      "path": "articles/yolo-evaluation-metrics.md",
+      "sha256": "cba03a03911cd4c9d5be78cd4de5efde9a77930a6e258ee38ea48e70474238db",
+      "resources": [
+        "media/029fbdea5341d4ec1b29586aef37a61ef9d13c42febad90821bb3470d1891a8d.png",
+        "media/130a2aa484ce89a20accde1ac5f99e72f15ac53551e4b2fb507247a088a6d79e.png",
+        "media/6094e7a2a475c1f824e85425ef6eef36c83fbcf867dd287602d0024f0f6d6160.png",
+        "media/960665f1ad72d48617ded45eb1eff244697a9c84bcda67211b32946c4fc89a41.png",
+        "media/a8cd83c163703c889b63be2bae39a7324c6a47ab064d205d99117fbf27c48002.png",
+        "media/b6afbc4a6f61095290b221704f6c6f1aa7bd4228a0b229f4ceae37b1ef94b390.png",
+        "media/d98b613d5093bcc78e2cbda60580379909ecbf49870ac0d185b1095ca05eb7f0.png"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "articles/ai-agent-architecture.md",
+      "kind": "article",
+      "sha256": "43ea5d68d223e4affeb0033bfe07d04b02a07f4aebc00fa31fa27747c63e1694",
+      "bytes": 8173,
+      "mediaType": "text/markdown"
+    },
+    {
+      "path": "articles/backpropagation.md",
+      "kind": "article",
+      "sha256": "f9daeea579f0081eccf3b3423611237a9d8e9f24589dc322201cddb3a5081635",
+      "bytes": 6254,
+      "mediaType": "text/markdown"
+    },
+    {
+      "path": "articles/kalman-filter-explained.md",
+      "kind": "article",
+      "sha256": "521250e0c327fff85d9ff0ecbcf906aecd3bb4e54ced32b31cf760b36804b94d",
+      "bytes": 10097,
+      "mediaType": "text/markdown"
+    },
+    {
+      "path": "articles/transformer.md",
+      "kind": "article",
+      "sha256": "e595475afb1e54e85d7d84efa1121d96a263db4b4475def926d28cacdbab705f",
+      "bytes": 13458,
+      "mediaType": "text/markdown"
+    },
+    {
+      "path": "articles/yolo-evaluation-metrics.md",
+      "kind": "article",
+      "sha256": "cba03a03911cd4c9d5be78cd4de5efde9a77930a6e258ee38ea48e70474238db",
+      "bytes": 10387,
+      "mediaType": "text/markdown"
+    },
+    {
+      "path": "interactives/0b89d14d3ddc7a4e7fc005f32262f564c38b8a4505cd654aefd4211d93c6012b.html",
+      "kind": "interactive",
+      "sha256": "0b89d14d3ddc7a4e7fc005f32262f564c38b8a4505cd654aefd4211d93c6012b",
+      "bytes": 7803,
+      "mediaType": "text/html"
+    },
+    {
+      "path": "interactives/1f733c6174369461323d4a68b6490252c6b20d16b2a7059c56c75b416ad18bb5.html",
+      "kind": "interactive",
+      "sha256": "1f733c6174369461323d4a68b6490252c6b20d16b2a7059c56c75b416ad18bb5",
+      "bytes": 7842,
+      "mediaType": "text/html"
+    },
+    {
+      "path": "interactives/551e0742e11619176052b23927ed63bcba0215f69342f2ba99957f6d4486dfe2.html",
+      "kind": "interactive",
+      "sha256": "551e0742e11619176052b23927ed63bcba0215f69342f2ba99957f6d4486dfe2",
+      "bytes": 7236,
+      "mediaType": "text/html"
+    },
+    {
+      "path": "interactives/5e6f3715824715dbc69af132c4f9088b8aeb9d2b4cb3035916b20238e4a56e65.html",
+      "kind": "interactive",
+      "sha256": "5e6f3715824715dbc69af132c4f9088b8aeb9d2b4cb3035916b20238e4a56e65",
+      "bytes": 7625,
+      "mediaType": "text/html"
+    },
+    {
+      "path": "interactives/64c42061cc0ecce2a7a2c76163a99bcd20b111c70a0b0c1190f2d9e242c8440f.html",
+      "kind": "interactive",
+      "sha256": "64c42061cc0ecce2a7a2c76163a99bcd20b111c70a0b0c1190f2d9e242c8440f",
+      "bytes": 4958,
+      "mediaType": "text/html"
+    },
+    {
+      "path": "interactives/73f339df0626fb6edcbf80fcb6c919377e693ede5ff560d098e5d9ab75934c9a.html",
+      "kind": "interactive",
+      "sha256": "73f339df0626fb6edcbf80fcb6c919377e693ede5ff560d098e5d9ab75934c9a",
+      "bytes": 24702,
+      "mediaType": "text/html"
+    },
+    {
+      "path": "media/029fbdea5341d4ec1b29586aef37a61ef9d13c42febad90821bb3470d1891a8d.png",
+      "kind": "media",
+      "sha256": "029fbdea5341d4ec1b29586aef37a61ef9d13c42febad90821bb3470d1891a8d",
+      "bytes": 48256,
+      "mediaType": "image/png"
+    },
+    {
+      "path": "media/130a2aa484ce89a20accde1ac5f99e72f15ac53551e4b2fb507247a088a6d79e.png",
+      "kind": "media",
+      "sha256": "130a2aa484ce89a20accde1ac5f99e72f15ac53551e4b2fb507247a088a6d79e",
+      "bytes": 106421,
+      "mediaType": "image/png"
+    },
+    {
+      "path": "media/6094e7a2a475c1f824e85425ef6eef36c83fbcf867dd287602d0024f0f6d6160.png",
+      "kind": "media",
+      "sha256": "6094e7a2a475c1f824e85425ef6eef36c83fbcf867dd287602d0024f0f6d6160",
+      "bytes": 100202,
+      "mediaType": "image/png"
+    },
+    {
+      "path": "media/960665f1ad72d48617ded45eb1eff244697a9c84bcda67211b32946c4fc89a41.png",
+      "kind": "media",
+      "sha256": "960665f1ad72d48617ded45eb1eff244697a9c84bcda67211b32946c4fc89a41",
+      "bytes": 127224,
+      "mediaType": "image/png"
+    },
+    {
+      "path": "media/a8cd83c163703c889b63be2bae39a7324c6a47ab064d205d99117fbf27c48002.png",
+      "kind": "media",
+      "sha256": "a8cd83c163703c889b63be2bae39a7324c6a47ab064d205d99117fbf27c48002",
+      "bytes": 82782,
+      "mediaType": "image/png"
+    },
+    {
+      "path": "media/b6afbc4a6f61095290b221704f6c6f1aa7bd4228a0b229f4ceae37b1ef94b390.png",
+      "kind": "media",
+      "sha256": "b6afbc4a6f61095290b221704f6c6f1aa7bd4228a0b229f4ceae37b1ef94b390",
+      "bytes": 95928,
+      "mediaType": "image/png"
+    },
+    {
+      "path": "media/d98b613d5093bcc78e2cbda60580379909ecbf49870ac0d185b1095ca05eb7f0.png",
+      "kind": "media",
+      "sha256": "d98b613d5093bcc78e2cbda60580379909ecbf49870ac0d185b1095ca05eb7f0",
+      "bytes": 97129,
+      "mediaType": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+---
+import ArticleCard from "../../components/ArticleCard.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { publicationPromise } from "../../lib/site";
+export async function getStaticPaths() {
+  const publication = await publicationPromise;
+  const tags = [...new Set(publication.articles.flatMap((article) => article.tags))];
+  return tags.map((tag) => ({ params: { tag }, props: { tag, articles: publication.articles.filter((article) => article.tags.includes(tag)) } }));
+}
+const { tag, articles } = Astro.props;
+---
+<BaseLayout title={`#${tag} · 个人技术博客`}><h1>#{tag}</h1><div class="grid">{articles.map((article) => <ArticleCard article={article} />)}</div></BaseLayout>

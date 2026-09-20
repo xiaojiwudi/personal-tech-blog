@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://personal-tech-blog.invalid/schemas/content-package.schema.json",
+  "title": "PublicationManifestV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "source", "articles", "files"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "commitSha"],
+      "properties": {
+        "repository": { "const": "robot-kb" },
+        "commitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+      }
+    },
+    "articles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["slug", "path", "sha256", "resources"],
+        "properties": {
+          "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+          "path": { "type": "string", "pattern": "^articles/[a-z0-9]+(?:-[a-z0-9]+)*\\.md$" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "resources": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "kind", "sha256", "bytes", "mediaType"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["article", "media", "interactive"] },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "bytes": { "type": "integer", "minimum": 1, "maximum": 10485760 },
+          "mediaType": { "enum": ["text/markdown", "text/html", "image/png", "image/jpeg", "image/webp", "image/avif"] }
+        }
+      }
+    }
+  }
+}

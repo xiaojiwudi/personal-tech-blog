@@ -1,0 +1,20 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+<BaseLayout title="搜索 · 个人技术博客">
+  <h1>搜索</h1>
+  <div id="search">正在加载全文索引……</div>
+  <link href="/pagefind/pagefind-ui.css" rel="stylesheet" />
+  <script is:inline>
+    window.addEventListener("DOMContentLoaded", async () => {
+      const root = document.querySelector("#search");
+      try {
+        const module = await import("/pagefind/pagefind-ui.js");
+        root.textContent = "";
+        new module.PagefindUI({ element: "#search", showSubResults: true });
+      } catch {
+        root.textContent = "搜索索引将在生产构建后可用。";
+      }
+    });
+  </script>
+</BaseLayout>

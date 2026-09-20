@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>梯度下降 · 交互演示</title>
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f5f4f0; --bg3: #eeedea;
+  --tx: #1a1a18; --tx2: #6b6a65;
+  --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
+  --purple: #7F77DD; --teal: #1D9E75; --red: #E24B4A; --amber: #BA7517;
+  --bg-danger: #fcebeb; --tx-danger: #791f1f;
+  --r: 8px; --font: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono: 'Menlo','Monaco','Courier New',monospace;
+}
+@media (prefers-color-scheme:dark) {
+  :root {
+    --bg:#1c1c1a; --bg2:#262624; --bg3:#2e2e2c;
+    --tx:#eeecea; --tx2:#9c9a92;
+    --border:rgba(255,255,255,0.10); --border2:rgba(255,255,255,0.22);
+    --purple:#AFA9EC; --teal:#5DCAA5; --red:#F07070; --amber:#EF9F27;
+    --bg-danger:#2e0f0f; --tx-danger:#f09595;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--tx);padding:28px 24px 36px;max-width:680px;margin:0 auto;}
+h1{font-size:17px;font-weight:500;margin-bottom:4px;}
+.sub{font-size:13px;color:var(--tx2);margin-bottom:20px;line-height:1.6;}
+canvas{display:block;width:100%;border-radius:var(--r);border:0.5px solid var(--border);margin-bottom:16px;}
+hr{border:none;border-top:0.5px solid var(--border);margin:18px 0;}
+.ctrl{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.ctrl label{width:72px;font-size:12px;color:var(--tx2);flex-shrink:0;}
+.ctrl input[type=range]{flex:1;accent-color:var(--purple);cursor:pointer;}
+.ctrl .val{width:44px;text-align:right;font-size:13px;font-weight:500;font-family:var(--mono);color:var(--tx);}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
+button{padding:6px 16px;font-size:13px;font-family:var(--font);border-radius:var(--r);border:0.5px solid var(--border2);background:var(--bg2);color:var(--tx);cursor:pointer;transition:all .15s;}
+button:hover{background:var(--bg3);}
+.info{margin-top:14px;padding:12px 14px;background:var(--bg2);border-radius:var(--r);border:0.5px solid var(--border);font-size:13px;color:var(--tx2);line-height:1.7;}
+.info strong{color:var(--tx);font-weight:500;}
+#step-info{font-size:13px;color:var(--tx2);margin-left:8px;line-height:32px;}
+</style>
+</head>
+<body>
+<h1>梯度下降 · 可视化</h1>
+<p class="sub">调整学习率，观察"小球"如何沿损失曲面滚向最低点。学习率太大会在最低点两侧反复横跳。</p>
+
+<canvas id="c" height="220"></canvas>
+
+<div class="ctrl">
+  <label>学习率 η</label>
+  <input type="range" id="lr" min="0.01" max="0.99" step="0.01" value="0.15">
+  <span class="val" id="v-lr">0.15</span>
+</div>
+<div class="btn-row">
+  <button onclick="resetGD()">重置</button>
+  <button onclick="stepGD()">走一步 →</button>
+  <button onclick="runGD()">自动运行</button>
+  <span id="step-info"></span>
+</div>
+
+<div class="info">
+  <strong>梯度下降公式：</strong>w ← w − η · ∂L/∂w<br>
+  曲线为损失函数 L(w) = 0.8(w−1.5)² + 0.3，最小值在 w*=1.5。
+  切线（橙色）表示当前梯度，坡度越陡说明需要调整越多。
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const isDark = matchMedia('(prefers-color-scheme:dark)').matches;
+
+function resize(){
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = 220 * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  draw();
+}
+
+const W = () => canvas.offsetWidth;
+const H = 220;
+const pL=72, pR=20, pT=24, pB=44;
+
+const col = {
+  axis: isDark?'rgba(255,255,255,0.12)':'rgba(0,0,0,0.10)',
+  curve: isDark?'#AFA9EC':'#534AB7',
+  ball: '#E24B4A',
+  trail: isDark?'rgba(224,75,74,0.30)':'rgba(224,75,74,0.22)',
+  tangent: isDark?'rgba(239,159,39,0.65)':'rgba(186,117,23,0.60)',
+  minLine: isDark?'rgba(93,202,165,0.45)':'rgba(15,110,86,0.40)',
+  text: isDark?'rgba(255,255,255,0.42)':'rgba(0,0,0,0.36)',
+  textMain: isDark?'rgba(255,255,255,0.72)':'rgba(0,0,0,0.68)',
+};
+
+function loss(w){ return 0.8*(w-1.5)*(w-1.5)+0.3; }
+function grad(w){ return 1.6*(w-1.5); }
+function wx(w){ return pL + (w+1)/5*(W()-pL-pR); }
+function ly(l){ return pT + (H-pT-pB)*(1 - l/4.5); }
+
+let state = {w:-2.8, trail:[], step:0, timer:null};
+
+function draw(){
+  const w2 = W(), h2 = H;
+  ctx.clearRect(0,0,w2,h2);
+
+  // axes
+  ctx.strokeStyle=col.axis; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.moveTo(pL,pT); ctx.lineTo(pL,h2-pB); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pL,h2-pB); ctx.lineTo(w2-pR,h2-pB); ctx.stroke();
+
+  // grid lines
+  [0.5,1,1.5,2,2.5,3].forEach(v=>{
+    const y=ly(v);
+    ctx.strokeStyle=col.axis; ctx.lineWidth=0.4;
+    ctx.beginPath(); ctx.moveTo(pL,y); ctx.lineTo(w2-pR,y); ctx.stroke();
+    ctx.fillStyle=col.text; ctx.font=`10px ${getComputedStyle(document.body).getPropertyValue('--mono')||'monospace'}`;
+    ctx.textAlign='right'; ctx.fillText(v.toFixed(1), pL-4, y+3);
+  });
+
+  // min line
+  ctx.strokeStyle=col.minLine; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(wx(1.5),pT); ctx.lineTo(wx(1.5),h2-pB); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle=col.text; ctx.font='10px sans-serif'; ctx.textAlign='left';
+  ctx.fillText('w*=1.5', wx(1.5)+4, pT+12);
+
+  // labels
+  ctx.fillStyle=col.text; ctx.font='11px sans-serif';
+  ctx.textAlign='right'; ctx.fillText('L(w)', pL-4, pT+10);
+  ctx.textAlign='center'; ctx.fillText('w（参数）', pL+(w2-pL-pR)/2, h2-4);
+
+  // loss curve
+  ctx.strokeStyle=col.curve; ctx.lineWidth=2;
+  ctx.beginPath();
+  for(let i=0;i<=200;i++){
+    const w=-1+i*5/200;
+    const x=wx(w), y=ly(loss(w));
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // trail
+  if(state.trail.length>1){
+    ctx.strokeStyle=col.trail; ctx.lineWidth=1.5;
+    ctx.beginPath();
+    state.trail.forEach((pt,i)=>{
+      const x=wx(pt.w), y=ly(pt.l);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  }
+
+  // tangent
+  const bx=wx(state.w), by=ly(loss(state.w));
+  const g=grad(state.w), scale=(w2-pL-pR)/5;
+  ctx.strokeStyle=col.tangent; ctx.lineWidth=1.5; ctx.setLineDash([5,3]);
+  ctx.beginPath(); ctx.moveTo(bx-50, by-g*(-50/scale*(5/1))*0.4); ctx.lineTo(bx+50, by+g*(50/scale*(5/1))*0.4); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ball
+  ctx.fillStyle=col.ball;
+  ctx.beginPath(); ctx.arc(bx, by, 8, 0, Math.PI*2); ctx.fill();
+
+  // status text
+  ctx.fillStyle=col.textMain; ctx.font='12px sans-serif'; ctx.textAlign='left';
+  ctx.fillText(`w=${state.w.toFixed(3)}   L=${loss(state.w).toFixed(3)}   grad=${grad(state.w).toFixed(3)}`, pL+6, h2-pB+16);
+}
+
+function resetGD(){
+  if(state.timer){clearInterval(state.timer);state.timer=null;}
+  state={w:-2.8, trail:[], step:0, timer:null};
+  document.getElementById('step-info').textContent='';
+  draw();
+}
+
+function stepGD(){
+  const lr=+document.getElementById('lr').value;
+  if(Math.abs(grad(state.w))<0.002){ document.getElementById('step-info').textContent='已收敛 ✓'; return; }
+  state.trail.push({w:state.w, l:loss(state.w)});
+  state.w = Math.max(-1, Math.min(4, state.w - lr*grad(state.w)));
+  state.step++;
+  document.getElementById('step-info').textContent=`步数: ${state.step}`;
+  draw();
+}
+
+function runGD(){
+  if(state.timer){clearInterval(state.timer);state.timer=null;return;}
+  state.timer=setInterval(()=>{
+    if(Math.abs(grad(state.w))<0.002){
+      clearInterval(state.timer);state.timer=null;
+      document.getElementById('step-info').textContent=`收敛！步数: ${state.step}`;
+      return;
+    }
+    stepGD();
+  },120);
+}
+
+document.getElementById('lr').addEventListener('input',function(){
+  document.getElementById('v-lr').textContent=(+this.value).toFixed(2);
+});
+
+window.addEventListener('resize',resize);
+resize();
+</script>
+</body>
+</html>
